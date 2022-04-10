@@ -22,25 +22,21 @@ def get_photos(id):
     res = requests.get(url, params=params)
     photos = res.json()['response']['items']
 
-    # pprint(photos)
-    big_photos =[]
+    json_file =[]
     photo_big = []
     for photo in photos:
-        # print(photo['sizes'])
         sorted_photos = sorted(photo['sizes'], key=lambda x: x['height'])
         sorted_photos.reverse()
-        sorted_photos[0]['likes'] = photo['likes']['count']
-        big_photos.append(sorted_photos[0])
-
-        photo_big.append(sorted_photos[0]['url'])
+        # photo_big.append(sorted_photos[0]['url'])
+        photo_big.append({'file_name': f"{photo['likes']['count']}.jpeg", 'size': sorted_photos[0]['type'], 'url': sorted_photos[0]['url']})
+        json_file.append({'file_name': f"{photo['likes']['count']}.jpeg", 'size': sorted_photos[0]['type']})
 
     with open('data.txt', 'w') as outfile:
-        json.dump(big_photos, outfile, indent=4)
+        json.dump(json_file, outfile, indent=4)
 
     return photo_big
 
-photos = get_photos(get_user_id(screen_name))
-pprint(photos)
+uploaded_photos = get_photos(get_user_id(screen_name))
 
 class YaUploader:
     def __init__(self, token: str):
@@ -52,20 +48,30 @@ class YaUploader:
         params = {'path': folder}
         r = requests.put(url, headers=headers, params=params).json()
 
-    def upload(self, folder: str, file: str, photos:list):
+    # def upload(self, folder: str, file: str, photos:list):
+    #     upload_url = 'https://cloud-api.yandex.net/v1/disk/resources/upload'
+    #     headers = {'Content-Type': 'application/json', 'Accept': 'application/json',
+    #                'Authorization': f'OAuth {self.token}'}
+    #
+    #     for p in tqdm(photos):
+    #         params2 = {'path': f'{folder}/{file}', 'url': p}
+    #         response = requests.post(upload_url, headers=headers, params=params2)
+    #         time.sleep(0.5)
+
+    def upload(self, folder: str, photos:list):
         upload_url = 'https://cloud-api.yandex.net/v1/disk/resources/upload'
         headers = {'Content-Type': 'application/json', 'Accept': 'application/json',
                    'Authorization': f'OAuth {self.token}'}
 
         for p in tqdm(photos):
-            params2 = {'path': f'{folder}/{file}', 'url': p}
+            params2 = {'path': f"{folder}/{p['file_name']}", 'url': p['url']}
             response = requests.post(upload_url, headers=headers, params=params2)
             time.sleep(0.5)
 
 token = 'AQAAAAAnTSzNAADLW-jve_JHdkqztQk1d2ApBtE'
 folder = 'Backup'
-photo_name = 'date'
+pprint(uploaded_photos)
 
 uploader = YaUploader(token)
 result = uploader.create_folder(folder)
-result2 = uploader.upload(folder, photo_name, photos)
+result2 = uploader.upload(folder, uploaded_photos)
